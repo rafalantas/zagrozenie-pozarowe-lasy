@@ -24,7 +24,7 @@ def pobierz_i_zapisz_obrazek():
 
 def czysty_tekst(td):
     """Pobiera tylko bezpośredni tekst z komórki, bez zagnieżdżonych elementów."""
-    return td.find(text=True, recursive=False).strip() if td.find(text=True, recursive=False) else td.get_text(strip=True)
+    return td.find(string=True, recursive=False).strip() if td.find(string=True, recursive=False) else td.get_text(strip=True)
 
 def pobierz_dane_i_zagrozenie_i_godzine():
     try:
@@ -62,7 +62,7 @@ def pobierz_dane_i_zagrozenie_i_godzine():
 
         # Parsowanie godziny
         godzina = None
-        for tag in soup.find_all(text=re.compile(r'został wyznaczony na podstawie danych z')):
+        for tag in soup.find_all(string=re.compile(r'został wyznaczony na podstawie danych z')):
             raw = tag.parent.get_text(separator=' ', strip=True)
             match = re.search(r'(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2})', raw)
             if match:
