@@ -4,7 +4,6 @@ from discord_webhook import DiscordWebhook, DiscordEmbed
 import os
 import re
 
-# Konfiguracja
 WEBHOOK_URL = os.environ["DISCORD_WEBHOOK_URL"]
 IMG_URL = "https://www.traxelektronik.pl/pogoda/las/img/18_0map.png"
 DATA_URL = "https://www.traxelektronik.pl/pogoda/las/rejon.php?RejID=18"
@@ -22,9 +21,17 @@ def pobierz_i_zapisz_obrazek():
         print(f"Błąd pobierania obrazka: {e}")
         return False
 
-def czysty_tekst(td):
-    """Pobiera tylko bezpośredni tekst z komórki, bez zagnieżdżonych elementów."""
-    return td.find(string=True, recursive=False).strip() if td.find(string=True, recursive=False) else td.get_text(strip=True)
+def wyciagnij_liczbe(td):
+    """Wyciąga liczbę lub '-' z komórki tabeli, ignoruje zagnieżdżony tekst."""
+    tekst = td.get_text(separator='|', strip=True)
+    # weź ostatni segment po separatorze (właściwa wartość jest na końcu)
+    czesci = [c.strip() for c in tekst.split('|') if c.strip()]
+    for czesc in reversed(czesci):
+        if re.match(r'^-?\d+(\.\d+)?$', czesc) or czesc == '-' or czesc == '0':
+            return czesc
+    # fallback: szukaj liczby w całym tekście
+    match = re.search(r'-?\d+(\.\d+)?', tekst)
+    return match.group(0) if match else 'brak'
 
 def pobierz_dane_i_zagrozenie_i_godzine():
     try:
@@ -40,10 +47,10 @@ def pobierz_dane_i_zagrozenie_i_godzine():
             if len(cols) >= 5 and "Hajnówka" in cols[0].get_text(strip=True):
                 dane_hajnowka = {
                     "stacja": "Hajnówka",
-                    "wilg_sciolka": czysty_tekst(cols[1]).replace('-', 'brak'),
-                    "suma_opadu":   czysty_tekst(cols[2]).replace('-', 'brak'),
-                    "wilg_powietrze": czysty_tekst(cols[3]).replace('-', 'brak'),
-                    "temp_powietrze": czysty_tekst(cols[4]).replace('-', 'brak'),
+                    "wilg_sciolka":   wyciagnij_liczbe(cols[1]),
+                    "suma_opadu":     wyciagnij_liczbe(cols[2]),
+                    "wilg_powietrze": wyciagnij_liczbe(cols[3]),
+                    "temp_powietrze": wyciagnij_liczbe(cols[4]),
                 }
                 break
 
@@ -52,8 +59,7 @@ def pobierz_dane_i_zagrozenie_i_godzine():
         for td in soup.find_all('td', attrs={'colspan': '6'}):
             text = td.get_text(separator=' ', strip=True)
             if 'strefa 1_E' in text and 'SZPL' in text:
-                # wyciągnij tylko "1 - zagrożenie MAŁE" itp.
-                match = re.search(r'SZPL\s*:\s*(.+?)(?:\s{2,}|$)', text)
+                match = re.search(r'SZPL\s*:\s*(\d+\s*-\s*zagrożenie\s+\S+)', text)
                 if match:
                     zagrozenie = match.group(1).strip()
                 else:
@@ -91,17 +97,18 @@ def main():
     dane, zagrozenie, godzina = pobierz_dane_i_zagrozenie_i_godzine()
 
     if dane:
-        czas = f". Dane z {godzina}" if godzina else ""
+        czas = f" Dane z {godzina}" if godzina else ""
         zag  = zagrozenie if zagrozenie else "brak danych"
         wiadomosc = (
-            f"🌲 **Hajnówka – zagrożenie pożarowe lasu: {zag}**{czas}\n"
-            f"Wilgotność ściółki: **{dane['wilg_sciolka']}%**\n"
-            f"Suma opadu: **{dane['suma_opadu']} mm**\n"
-            f"Wilgotność powietrza: **{dane['wilg_powietrze']}%**\n"
-            f"Temperatura powietrza: **{dane['temp_powietrze']}°C**"
+            f"Hajnówka – zagrożenie pożarowe lasu: {zag}.{czas}\n"
+            f"Stacja: {dane['stacja']}\n"
+            f"Wilgotność ściółki: {dane['wilg_sciolka']}%\n"
+            f"Suma opadu: {dane['suma_opadu']} mm\n"
+            f"Wilgotność powietrza: {dane['wilg_powietrze']}%\n"
+            f"Temperatura powietrza: {dane['temp_powietrze']}°C"
         )
     else:
-        wiadomosc = "🌲 Nie znaleziono danych dla Hajnówki."
+        wiadomosc = "Nie znaleziono danych dla Hajnówki."
 
     wyslij_na_discord(wiadomosc, IMG_FILE if pobrano_obrazek else None)
 
