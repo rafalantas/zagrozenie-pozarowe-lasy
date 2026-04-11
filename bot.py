@@ -8,8 +8,21 @@ WEBHOOK_URL = os.environ["DISCORD_WEBHOOK_URL"]
 IMG_URL = "https://www.traxelektronik.pl/pogoda/las/img/18_0map.png"
 DATA_URL = "https://www.traxelektronik.pl/pogoda/las/rejon.php?RejID=18"
 IMG_FILE = "18_0map.png"
-# ID stacji Hajnówka
 STACJA_ID = "622"
+
+KOLORY_ZAGROZENIA = {
+    "0": 0x2ECC71,   # zielony      – brak
+    "1": 0xF1C40F,   # żółty        – małe
+    "2": 0xE67E22,   # pomarańczowy – średnie
+    "3": 0xE74C3C,   # czerwony     – duże
+}
+
+EMOJI_ZAGROZENIA = {
+    "0": "🟢",
+    "1": "🟡",
+    "2": "🟠",
+    "3": "🔴",
+}
 
 def pobierz_i_zapisz_obrazek():
     try:
@@ -30,7 +43,7 @@ def pobierz_dane_i_zagrozenie_i_godzine():
         response.raise_for_status()
         soup = BeautifulSoup(response.content, "html.parser", from_encoding="iso-8859-2")
 
-        # Znajdź link do stacji Hajnówka po ID
+        # Znajdź wiersz Hajnówki po ID stacji
         link = soup.find('a', href=re.compile(rf'idst={STACJA_ID}'))
         dane_hajnowka = None
         if link:
@@ -38,7 +51,6 @@ def pobierz_dane_i_zagrozenie_i_godzine():
             if row:
                 cols = row.find_all('td')
                 if len(cols) >= 5:
-                    # Wyciągnij czysty tekst z każdej kolumny przez nawigację po NavigableString
                     def pierwsza_liczba(td):
                         for s in td.strings:
                             s = s.strip().replace('*', '')
@@ -54,7 +66,7 @@ def pobierz_dane_i_zagrozenie_i_godzine():
                         "temp_powietrze": pierwsza_liczba(cols[4]),
                     }
 
-        # Parsowanie stopnia zagrożenia dla strefy 1_E
+        # Stopień zagrożenia dla strefy 1_E
         zagrozenie = None
         for td in soup.find_all('td', attrs={'colspan': '6'}):
             text = td.get_text(separator=' ', strip=True)
@@ -66,7 +78,7 @@ def pobierz_dane_i_zagrozenie_i_godzine():
                     zagrozenie = text.split(':')[-1].strip()
                 break
 
-        # Parsowanie godziny
+        # Godzina danych
         godzina = None
         for tag in soup.find_all(string=re.compile(r'zosta. wyznaczony na podstawie danych z')):
             raw = tag.parent.get_text(separator=' ', strip=True)
@@ -80,10 +92,10 @@ def pobierz_dane_i_zagrozenie_i_godzine():
         print(f"Błąd pobierania danych: {e}")
         return None, None, None
 
-def wyslij_na_discord(wiadomosc, obrazek=None):
+def wyslij_na_discord(title, opis, kolor, obrazek=None):
     try:
         webhook = DiscordWebhook(url=WEBHOOK_URL)
-        embed = DiscordEmbed(description=wiadomosc)
+        embed = DiscordEmbed(title=title, description=opis, color=kolor)
         webhook.add_embed(embed)
         if obrazek and os.path.exists(obrazek):
             with open(obrazek, "rb") as f:
@@ -97,20 +109,29 @@ def main():
     dane, zagrozenie, godzina = pobierz_dane_i_zagrozenie_i_godzine()
 
     if dane:
-        czas = f" Dane z {godzina}" if godzina else ""
+        czas = f"\nDane z {godzina}" if godzina else ""
         zag  = zagrozenie if zagrozenie else "brak danych"
-        wiadomosc = (
-            f"Hajnówka – zagrożenie pożarowe lasu: {zag}.{czas}\n"
-            f"Stacja: {dane['stacja']}\n"
-            f"Wilgotność ściółki: {dane['wilg_sciolka']}%\n"
-            f"Suma opadu: {dane['suma_opadu']} mm\n"
-            f"Wilgotność powietrza: {dane['wilg_powietrze']}%\n"
-            f"Temperatura powietrza: {dane['temp_powietrze']}°C"
+
+        poziom = re.match(r'^(\d)', zag)
+        poziom = poziom.group(1) if poziom else "0"
+        kolor  = KOLORY_ZAGROZENIA.get(poziom, 0x95A5A6)
+        emoji  = EMOJI_ZAGROZENIA.get(poziom, "⚪")
+
+        title = f"{emoji} Zagrożenie pożarowe lasu – Hajnówka"
+        opis  = (
+            f"**{zag}**{czas}\n"
+            f"\n"
+            f"🌿 Wilgotność ściółki: **{dane['wilg_sciolka']}%**\n"
+            f"🌧️ Suma opadu: **{dane['suma_opadu']} mm**\n"
+            f"💧 Wilgotność powietrza: **{dane['wilg_powietrze']}%**\n"
+            f"🌡️ Temperatura powietrza: **{dane['temp_powietrze']}°C**"
         )
     else:
-        wiadomosc = "Nie znaleziono danych dla Hajnówki."
+        title = "⚠️ Hajnówka – brak danych"
+        opis  = "Nie znaleziono danych dla stacji Hajnówka."
+        kolor = 0x95A5A6
 
-    wyslij_na_discord(wiadomosc, IMG_FILE if pobrano_obrazek else None)
+    wyslij_na_discord(title, opis, kolor, IMG_FILE if pobrano_obrazek else None)
 
 if __name__ == "__main__":
     main()
