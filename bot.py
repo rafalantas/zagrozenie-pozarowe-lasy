@@ -100,7 +100,7 @@ def main():
         czas = f" Dane z {godzina}" if godzina else ""
         zag  = zagrozenie if zagrozenie else "brak danych"
         wiadomosc = (
-            f"Hajnówka – zagrożenie pożarowe lasu: {zag}. Dane z{czas}\n"
+            f"Hajnówka – zagrożenie pożarowe lasu: {zag}.{czas}\n"
             f"Stacja: {dane['stacja']}\n"
             f"Wilgotność ściółki: {dane['wilg_sciolka']}%\n"
             f"Suma opadu: {dane['suma_opadu']} mm\n"
