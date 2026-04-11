@@ -21,36 +21,33 @@ def pobierz_i_zapisz_obrazek():
         print(f"Błąd pobierania obrazka: {e}")
         return False
 
-def wyciagnij_liczbe(td):
-    """Wyciąga liczbę lub '-' z komórki tabeli, ignoruje zagnieżdżony tekst tooltipów."""
-    # Bierze tylko bezpośrednie węzły tekstowe (nie zagnieżdżone tagi)
-    teksty = [t.strip() for t in td.find_all(string=True, recursive=False) if t.strip()]
-    for tekst in teksty:
-        if re.match(r'^-?\d+(\.\d+)?$', tekst) or tekst == '-':
-            return tekst
-    # fallback: pierwsza liczba z bezpośredniego tekstu
-    bezposredni = ' '.join(teksty)
-    match = re.match(r'^(-?\d+(\.\d+)?)', bezposredni)
-    return match.group(1) if match else 'brak'
-
 def pobierz_dane_i_zagrozenie_i_godzine():
     try:
         headers = {"User-Agent": "Mozilla/5.0"}
         response = requests.get(DATA_URL, headers=headers, timeout=10)
         response.raise_for_status()
-        soup = BeautifulSoup(response.text, "html.parser")
+        # strona kodowana w ISO-8859-2
+        soup = BeautifulSoup(response.content, "html.parser", from_encoding="iso-8859-2")
 
         # Parsowanie danych dla Hajnówki
         dane_hajnowka = None
         for row in soup.find_all("tr"):
             cols = row.find_all("td")
-            if len(cols) >= 5 and "Hajnówka" in cols[0].get_text(strip=True):
+            if len(cols) >= 5 and "Hajn" in cols[0].get_text():
+                # wartości są bezpośrednio jako tekst w td, obok linka
+                def val(td):
+                    # usuń tagi <a> i <span>, zostaw tylko teksty
+                    for tag in td.find_all(['a', 'span']):
+                        tag.decompose()
+                    t = td.get_text(strip=True).replace('*', '').replace('-', 'brak')
+                    return t if t else 'brak'
+
                 dane_hajnowka = {
-                    "stacja": "Hajnówka",
-                    "wilg_sciolka":   wyciagnij_liczbe(cols[1]),
-                    "suma_opadu":     wyciagnij_liczbe(cols[2]),
-                    "wilg_powietrze": wyciagnij_liczbe(cols[3]),
-                    "temp_powietrze": wyciagnij_liczbe(cols[4]),
+                    "stacja":         "Hajnówka",
+                    "wilg_sciolka":   val(cols[1]),
+                    "suma_opadu":     val(cols[2]),
+                    "wilg_powietrze": val(cols[3]),
+                    "temp_powietrze": val(cols[4]),
                 }
                 break
 
@@ -58,8 +55,8 @@ def pobierz_dane_i_zagrozenie_i_godzine():
         zagrozenie = None
         for td in soup.find_all('td', attrs={'colspan': '6'}):
             text = td.get_text(separator=' ', strip=True)
-            if 'strefa 1_E' in text and 'SZPL' in text:
-                match = re.search(r'SZPL\s*:\s*(\d+\s*-\s*zagrożenie\s+\S+)', text)
+            if '1_E' in text and 'SZPL' in text:
+                match = re.search(r'SZPL\s*:\s*(\d+\s*-\s*zagro.enie\s+\S+)', text)
                 if match:
                     zagrozenie = match.group(1).strip()
                 else:
@@ -68,7 +65,7 @@ def pobierz_dane_i_zagrozenie_i_godzine():
 
         # Parsowanie godziny
         godzina = None
-        for tag in soup.find_all(string=re.compile(r'został wyznaczony na podstawie danych z')):
+        for tag in soup.find_all(string=re.compile(r'zosta. wyznaczony na podstawie danych z')):
             raw = tag.parent.get_text(separator=' ', strip=True)
             match = re.search(r'(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2})', raw)
             if match:
