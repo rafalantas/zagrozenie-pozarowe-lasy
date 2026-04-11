@@ -6,7 +6,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: pozary-hajnowka:latest
     container_name: pozary-hajnowka
     working_dir: /app
     command: tail -f /dev/null
