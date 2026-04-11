@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+
+  pozary-hajnowka:
+    build:
+      context: https://github.com/TWOJ_USER/TWOJE_REPO.git#main
+      dockerfile: Dockerfile
+    image: pozary-hajnowka:latest
+    container_name: pozary-hajnowka
+    working_dir: /app
+    command: tail -f /dev/null
+    environment:
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+    labels:
+      ofelia.enabled: "true"
+      ofelia.job-exec.pozary-rano.schedule: "50 9 * * *"
+      ofelia.job-exec.pozary-rano.command: python bot.py
+      ofelia.job-exec.pozary-poludnie.schedule: "50 13 * * *"
+      ofelia.job-exec.pozary-poludnie.command: python bot.py
+    restart: unless-stopped
