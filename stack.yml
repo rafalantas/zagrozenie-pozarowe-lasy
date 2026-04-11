@@ -11,11 +11,12 @@ services:
     command: tail -f /dev/null
     environment:
       - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+      - TZ=Europe/Warsaw
     labels:
       ofelia.enabled: "true"
-      ofelia.job-exec.pozary-rano.schedule: "50 9 * * *"
+      ofelia.job-exec.pozary-rano.schedule: "50 7 * * *"
       ofelia.job-exec.pozary-rano.command: python bot.py
-      ofelia.job-exec.pozary-poludnie.schedule: "50 13 * * *"
+      ofelia.job-exec.pozary-poludnie.schedule: "50 11 * * *"
       ofelia.job-exec.pozary-poludnie.command: python bot.py
     networks:
       - default
