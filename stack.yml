@@ -4,7 +4,7 @@ services:
 
   pozary-hajnowka:
     build:
-      context: https://github.com/TWOJ_USER/TWOJE_REPO.git#main
+      context: .
       dockerfile: Dockerfile
     image: pozary-hajnowka:latest
     container_name: pozary-hajnowka
