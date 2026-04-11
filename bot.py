@@ -22,16 +22,16 @@ def pobierz_i_zapisz_obrazek():
         return False
 
 def wyciagnij_liczbe(td):
-    """Wyciąga liczbę lub '-' z komórki tabeli, ignoruje zagnieżdżony tekst."""
-    tekst = td.get_text(separator='|', strip=True)
-    # weź ostatni segment po separatorze (właściwa wartość jest na końcu)
-    czesci = [c.strip() for c in tekst.split('|') if c.strip()]
-    for czesc in reversed(czesci):
-        if re.match(r'^-?\d+(\.\d+)?$', czesc) or czesc == '-' or czesc == '0':
-            return czesc
-    # fallback: szukaj liczby w całym tekście
-    match = re.search(r'-?\d+(\.\d+)?', tekst)
-    return match.group(0) if match else 'brak'
+    """Wyciąga liczbę lub '-' z komórki tabeli, ignoruje zagnieżdżony tekst tooltipów."""
+    # Bierze tylko bezpośrednie węzły tekstowe (nie zagnieżdżone tagi)
+    teksty = [t.strip() for t in td.find_all(string=True, recursive=False) if t.strip()]
+    for tekst in teksty:
+        if re.match(r'^-?\d+(\.\d+)?$', tekst) or tekst == '-':
+            return tekst
+    # fallback: pierwsza liczba z bezpośredniego tekstu
+    bezposredni = ' '.join(teksty)
+    match = re.match(r'^(-?\d+(\.\d+)?)', bezposredni)
+    return match.group(1) if match else 'brak'
 
 def pobierz_dane_i_zagrozenie_i_godzine():
     try:
