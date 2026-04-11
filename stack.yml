@@ -14,9 +14,9 @@ services:
       - TZ=Europe/Warsaw
     labels:
       ofelia.enabled: "true"
-      ofelia.job-exec.pozary-rano.schedule: "0 50 7 * * *"
+      ofelia.job-exec.pozary-rano.schedule: "0 50 9 * * *"
       ofelia.job-exec.pozary-rano.command: python bot.py
-      ofelia.job-exec.pozary-poludnie.schedule: "0 50 11 * * *"
+      ofelia.job-exec.pozary-poludnie.schedule: "0 50 13 * * *"
       ofelia.job-exec.pozary-poludnie.command: python bot.py
     networks:
       - default
