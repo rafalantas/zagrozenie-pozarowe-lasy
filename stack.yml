@@ -17,4 +17,13 @@ services:
       ofelia.job-exec.pozary-rano.command: python bot.py
       ofelia.job-exec.pozary-poludnie.schedule: "50 13 * * *"
       ofelia.job-exec.pozary-poludnie.command: python bot.py
+    networks:
+      - default
+      - ofelia_net
     restart: unless-stopped
+
+networks:
+  default:
+  ofelia_net:
+    external: true
+    name: viking-fitatu-integration_default
