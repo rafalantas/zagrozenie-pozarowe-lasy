@@ -3,7 +3,7 @@ version: "3.8"
 services:
   pozary-hajnowka:
     image: ghcr.io/rafalantas/zagrozenie-pozarowe-lasy:latest
-    container_name: pozary-hajnowka
+    container_name: zagrozenie-pozarowe-lasy
     working_dir: /app
     command: tail -f /dev/null
     environment:
