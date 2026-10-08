@@ -1,0 +1,27 @@
+version: "3.8"
+
+services:
+  pozary-hajnowka:
+    image: ghcr.io/rafalantas/zagrozenie-pozarowe-lasy:latest
+    container_name: pozary-hajnowka
+    working_dir: /app
+    command: tail -f /dev/null
+    environment:
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+      - TZ=Europe/Warsaw
+    labels:
+      ofelia.enabled: "true"
+      ofelia.job-exec.pozary-rano.schedule: "0 05 10 * * *"
+      ofelia.job-exec.pozary-rano.command: python bot.py
+      ofelia.job-exec.pozary-poludnie.schedule: "0 05 14 * * *"
+      ofelia.job-exec.pozary-poludnie.command: python bot.py
+    networks:
+      - default
+      - ofelia_net
+    restart: unless-stopped
+
+networks:
+  default:
+  ofelia_net:
+    external: true
+    name: viking-fitatu-integration_default
